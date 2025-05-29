@@ -1,0 +1,60 @@
+services:
+  mariadb:
+    container_name: mariadb
+    build: ./requirements/mariadb
+    image: mariadb-img
+    env_file:
+      - /home/ilyas/Desktop/.secrets/.env
+    ports:
+      - "3306:3306"
+    volumes:
+      - DB:/var/lib/mysql
+    networks:
+      - inception
+  wordpress:
+    container_name: wordpress
+    build: ./requirements/wordpress
+    image: wordpress-img
+    depends_on:
+      - mariadb
+    ports:
+      - "9000:9000"
+    env_file:
+      - /home/ilyas/Desktop/.secrets/.env
+    volumes:
+      - wordpress:/var/www/wordpress
+    networks:
+      - inception
+  nginx:
+    container_name: nginx
+    build: ./requirements/nginx
+    image: nginx-img
+    depends_on:
+      - wordpress
+    env_file:
+      - /home/ilyas/Desktop/.secrets/.env
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - inception
+    volumes:
+      - wordpress:/var/www/wordpress
+volumes:
+  DB:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/ilyas/data/mysql
+  wordpress:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/ilyas/data/wordpress
+
+
+networks:
+  inception:
+    driver: bridge
