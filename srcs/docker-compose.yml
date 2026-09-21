@@ -41,8 +41,7 @@ services:
     volumes:
       # NGINX needs access to the exact same path to serve static files
       - wordpress:/var/www/html
-      # Bind-mount your custom NGINX config since we are no longer building the image
-      - ./requirements/nginx/conf:/etc/nginx/conf.d:ro
+      - ./requirements/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro
 
 volumes:
   DB:
