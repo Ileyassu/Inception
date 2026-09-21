@@ -9,4 +9,4 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 COPY init.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/init.sh
 
-ENTRYPOINT ["wp-setup.sh"]
+ENTRYPOINT ["init.sh"]
