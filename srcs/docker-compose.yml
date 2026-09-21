@@ -1,8 +1,7 @@
 services:
   mariadb:
     container_name: mariadb
-    build: ./requirements/mariadb
-    image: mariadb-img
+    image: mariadb:10.11
     env_file:
       - .env
     ports:
