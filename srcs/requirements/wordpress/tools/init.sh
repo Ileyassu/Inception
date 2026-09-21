@@ -1,14 +1,18 @@
 #!/bin/bash
 
-# Run WP-CLI in the background
 (
-    echo "Waiting 15 seconds for MariaDB and WordPress initialization..."
-    sleep 15
-    
+    # Give the official entrypoint a few seconds to extract the core files
+    sleep 5
     cd /var/www/html
 
+    echo "Waiting for MariaDB to be fully initialized..."
+    # Smart loop: keep trying to connect every 3 seconds until it succeeds
+    while ! wp db check --allow-root; do
+        sleep 3
+    done
+    echo "MariaDB is up! Starting WordPress configuration..."
+
     if ! wp core is-installed --allow-root; then
-        echo "Running WP-CLI installation..."
         wp core install \
           --url="https://ibenaiss.42.fr" \
           --title="Inception" \
@@ -17,30 +21,17 @@
           --admin_email="admin@ibenaiss.42.fr" \
           --allow-root
 
-        echo "Creating second user..."
         wp user create --allow-root \
             seconduser second@ibenaiss.42.fr \
             --user_pass="password123" \
             --role=author
 
-        echo "Applying custom debugging settings..."
-        cat >> /var/www/html/wp-config.php << 'EOF'
-
-// Disable all debugging
-if ( ! defined( 'WP_DEBUG' ) ) {
-    define( 'WP_DEBUG', false );
-}
-define( 'WP_DEBUG_LOG', false );
-define( 'WP_DEBUG_DISPLAY', false );
-define( 'SCRIPT_DEBUG', false );
-define( 'WP_CACHE', true );
-@ini_set( 'display_errors', 0 );
-@ini_set( 'log_errors', 0 );
-error_reporting(0);
-EOF
-        echo "WP-CLI setup complete!"
+        echo "WordPress completely installed and configured!"
+    else
+        echo "WordPress is already installed."
     fi
-) &
+) > /proc/1/fd/1 2>&1 & 
+# ^ The line above forces all output to show up in 'docker compose logs wordpress'
 
 # Chain to the official WordPress entrypoint
-exec docker-entrypoint.sh "$@"
+exec docker-entrypoint.sh php-fpm
