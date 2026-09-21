@@ -10,10 +10,10 @@ services:
       - DB:/var/lib/mysql
     networks:
       - inception
+      
   wordpress:
     container_name: wordpress
-    build: ./requirements/wordpress
-    image: wordpress-img
+    image: wordpress:fpm
     depends_on:
       - mariadb
     ports:
@@ -21,13 +21,14 @@ services:
     env_file:
       - .env
     volumes:
-      - wordpress:/var/www/wordpress
+      # Official image requires /var/www/html
+      - wordpress:/var/www/html
     networks:
       - inception
+      
   nginx:
     container_name: nginx
-    build: ./requirements/nginx
-    image: nginx-img
+    image: nginx:latest
     depends_on:
       - wordpress
     env_file:
@@ -38,7 +39,11 @@ services:
     networks:
       - inception
     volumes:
-      - wordpress:/var/www/wordpress
+      # NGINX needs access to the exact same path to serve static files
+      - wordpress:/var/www/html
+      # Bind-mount your custom NGINX config since we are no longer building the image
+      - ./requirements/nginx/conf:/etc/nginx/conf.d:ro
+
 volumes:
   DB:
     driver: local
@@ -52,7 +57,6 @@ volumes:
       type: none
       o: bind
       device: /home/ubuntu/data/wordpress
-
 
 networks:
   inception:
