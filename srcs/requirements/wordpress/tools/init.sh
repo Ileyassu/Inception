@@ -1,37 +1,48 @@
 #!/bin/bash
 
-(
-    # Give the official entrypoint a few seconds to extract the core files
-    sleep 5
-    cd /var/www/html
+cd /var/www/html
 
-    echo "Waiting for MariaDB to be fully initialized..."
-    # Smart loop: keep trying to connect every 3 seconds until it succeeds
-    while ! wp db check --allow-root; do
+# Check if wp-config.php exists. If not, it's a fresh installation.
+if [ ! -f wp-config.php ]; then
+    echo "Setting up WordPress for the first time..."
+    
+    # Download WordPress core files
+    wp core download --allow-root
+
+    # Generate wp-config.php using your .env variables
+    wp config create \
+        --dbname="${MYSQL_DATABASE}" \
+        --dbuser="${MYSQL_USER}" \
+        --dbpass="${MYSQL_PASSWORD}" \
+        --dbhost=mariadb \
+        --allow-root
+
+    # Wait for MariaDB to boot and accept connections
+    echo "Waiting for database connection..."
+    while ! wp db check --allow-root > /dev/null 2>&1; do
         sleep 3
     done
-    echo "MariaDB is up! Starting WordPress configuration..."
+    echo "Database connected!"
 
-    if ! wp core is-installed --allow-root; then
-        wp core install \
-          --url="https://ibenaiss.42.fr" \
-          --title="Inception" \
-          --admin_user="${WP_USER}" \
-          --admin_password="${WP_PASSWORD}" \
-          --admin_email="admin@ibenaiss.42.fr" \
-          --allow-root
+    # Install WordPress automatically
+    wp core install \
+        --url="https://ibenaiss.42.fr" \
+        --title="Inception" \
+        --admin_user="${WP_USER}" \
+        --admin_password="${WP_PASSWORD}" \
+        --admin_email="admin@ibenaiss.42.fr" \
+        --allow-root
 
-        wp user create --allow-root \
-            seconduser second@ibenaiss.42.fr \
-            --user_pass="password123" \
-            --role=author
+    # Create the second user required by the subject
+    wp user create --allow-root \
+        seconduser second@ibenaiss.42.fr \
+        --user_pass="password123" \
+        --role=author
 
-        echo "WordPress completely installed and configured!"
-    else
-        echo "WordPress is already installed."
-    fi
-) > /proc/1/fd/1 2>&1 & 
-# ^ The line above forces all output to show up in 'docker compose logs wordpress'
+    echo "WordPress setup is fully complete!"
+else
+    echo "WordPress is already configured."
+fi
 
-# Chain to the official WordPress entrypoint
-exec docker-entrypoint.sh php-fpm
+# Start PHP-FPM in the foreground to keep the container alive
+exec php-fpm
