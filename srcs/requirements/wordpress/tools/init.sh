@@ -1,24 +1,29 @@
 #!/bin/bash
 
-# Run the WP-CLI installation in the background
+# Run WP-CLI in the background
 (
-    # Wait for MariaDB to be ready and for the official entrypoint to finish unpacking WP
+    echo "Waiting 15 seconds for MariaDB and WordPress initialization..."
     sleep 15
     
     cd /var/www/html
 
-    # Check if WordPress is already configured
     if ! wp core is-installed --allow-root; then
-        echo "Installing WordPress..."
+        echo "Running WP-CLI installation..."
         wp core install \
           --url="https://ibenaiss.42.fr" \
-          --title="ibenaiss portfolio" \
+          --title="Inception" \
           --admin_user="${WP_USER}" \
           --admin_password="${WP_PASSWORD}" \
-          --admin_email="you@example.com" \
+          --admin_email="admin@ibenaiss.42.fr" \
           --allow-root
 
-        echo "Appending custom debug config..."
+        echo "Creating second user..."
+        wp user create --allow-root \
+            seconduser second@ibenaiss.42.fr \
+            --user_pass="password123" \
+            --role=author
+
+        echo "Applying custom debugging settings..."
         cat >> /var/www/html/wp-config.php << 'EOF'
 
 // Disable all debugging
@@ -29,14 +34,13 @@ define( 'WP_DEBUG_LOG', false );
 define( 'WP_DEBUG_DISPLAY', false );
 define( 'SCRIPT_DEBUG', false );
 define( 'WP_CACHE', true );
-/* That's all, stop editing! Happy publishing. */
 @ini_set( 'display_errors', 0 );
 @ini_set( 'log_errors', 0 );
 error_reporting(0);
 EOF
-        echo "WordPress setup complete."
+        echo "WP-CLI setup complete!"
     fi
 ) &
 
-# Execute the official entrypoint in the foreground to start PHP
-exec docker-entrypoint.sh php-fpm
+# Chain to the official WordPress entrypoint
+exec docker-entrypoint.sh "$@"
