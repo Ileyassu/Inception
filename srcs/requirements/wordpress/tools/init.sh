@@ -2,29 +2,34 @@
 
 cd /var/www/html
 
-# Check if wp-config.php exists. If not, it's a fresh installation.
-if [ ! -f wp-config.php ]; then
-    echo "Setting up WordPress for the first time..."
-    
-    # Download WordPress core files
-    wp core download --allow-root
+# Check the database state instead of only checking wp-config.php. A failed
+# install can leave wp-config.php behind while WordPress remains uninstalled.
+if ! wp core is-installed --allow-root > /dev/null 2>&1; then
+    echo "Setting up WordPress..."
 
-    # Generate wp-config.php using your .env variables
-    wp config create \
-        --dbname="${MYSQL_DATABASE}" \
-        --dbuser="${MYSQL_USER}" \
-        --dbpass="${MYSQL_PASSWORD}" \
-        --dbhost=mariadb \
-        --allow-root
+    # Download WordPress core files when the persistent volume is empty.
+    if [ ! -f index.php ]; then
+        wp core download --allow-root
+    fi
 
-    # Wait for MariaDB to boot and accept connections
+    # Generate wp-config.php when it does not exist yet.
+    if [ ! -f wp-config.php ]; then
+        wp config create \
+            --dbname="${MYSQL_DATABASE}" \
+            --dbuser="${MYSQL_USER}" \
+            --dbpass="${MYSQL_PASSWORD}" \
+            --dbhost=mariadb \
+            --allow-root
+    fi
+
+    # Wait for MariaDB to boot and accept connections.
     echo "Waiting for database connection..."
     while ! wp db check --allow-root > /dev/null 2>&1; do
         sleep 3
     done
     echo "Database connected!"
 
-    # Install WordPress automatically
+    # Install WordPress automatically when the database is not initialized.
     wp core install \
         --url="https://ibenaiss.42.fr" \
         --title="Inception" \
@@ -33,11 +38,13 @@ if [ ! -f wp-config.php ]; then
         --admin_email="admin@ibenaiss.42.fr" \
         --allow-root
 
-    # Create the second user required by the subject
-    wp user create --allow-root \
-        seconduser second@ibenaiss.42.fr \
-        --user_pass="password123" \
-        --role=author
+    # Create the second user required by the subject when it does not exist.
+    if ! wp user get seconduser --allow-root > /dev/null 2>&1; then
+        wp user create --allow-root \
+            seconduser second@ibenaiss.42.fr \
+            --user_pass="password123" \
+            --role=author
+    fi
 
     echo "WordPress setup is fully complete!"
 else
