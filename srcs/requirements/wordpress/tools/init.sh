@@ -2,6 +2,9 @@
 
 cd /var/www/html
 
+# Keep the CLI installer independent from PHP-FPM's smaller runtime limit.
+export WP_CLI_PHP_ARGS="${WP_CLI_PHP_ARGS:--d memory_limit=512M}"
+
 # Check the database state instead of only checking wp-config.php. A failed
 # install can leave wp-config.php behind while WordPress remains uninstalled.
 if ! wp core is-installed --allow-root > /dev/null 2>&1; then

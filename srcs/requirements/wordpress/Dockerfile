@@ -1,5 +1,8 @@
 FROM wordpress:fpm
 
+# WP-CLI needs more memory than PHP-FPM's default while extracting WordPress.
+ENV WP_CLI_PHP_ARGS="-d memory_limit=512M"
+
 # Install WP-CLI
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
     && chmod +x wp-cli.phar \
