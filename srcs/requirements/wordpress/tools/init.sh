@@ -29,7 +29,14 @@ if ! wp core is-installed --allow-root > /dev/null 2>&1; then
 
     # Wait for MariaDB to boot and accept connections.
     echo "Waiting for database connection..."
-    while ! wp db check --allow-root > /dev/null 2>&1; do
+    attempts=0
+    until wp db check --allow-root > /dev/null 2>&1; do
+        attempts=$((attempts + 1))
+        if [ "$attempts" -ge 20 ]; then
+            echo "WordPress could not connect to the database with the configured credentials." >&2
+            wp db check --allow-root
+            exit 1
+        fi
         sleep 3
     done
     echo "Database connected!"
