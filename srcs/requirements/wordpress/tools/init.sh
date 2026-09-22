@@ -4,6 +4,20 @@ set -e
 
 cd /var/www/html
 
+configure_dynamic_site_url() {
+    if [ -f wp-config.php ] && ! grep -q "INCEPTION_DYNAMIC_SITE_URL" wp-config.php; then
+        printf '%s\n' \
+            "/* INCEPTION_DYNAMIC_SITE_URL */" \
+            "\$inception_host = \$_SERVER['HTTP_HOST'] ?? 'ibenaiss.42.fr';" \
+            "\$inception_scheme = (!empty(\$_SERVER['HTTPS']) && \$_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';" \
+            "define('WP_HOME', \$inception_scheme . '://' . \$inception_host);" \
+            "define('WP_SITEURL', \$inception_scheme . '://' . \$inception_host);" \
+            >> wp-config.php
+    fi
+}
+
+configure_dynamic_site_url
+
 # Keep the CLI installer independent from PHP-FPM's smaller runtime limit.
 wp() {
     php -d memory_limit=512M /usr/local/bin/wp "$@"
@@ -28,6 +42,8 @@ if ! wp core is-installed --allow-root > /dev/null 2>&1; then
             --dbhost=mariadb \
             --allow-root
     fi
+
+    configure_dynamic_site_url
 
     echo "Checking the WordPress database connection..."
     attempts=0
