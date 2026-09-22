@@ -3,7 +3,9 @@
 cd /var/www/html
 
 # Keep the CLI installer independent from PHP-FPM's smaller runtime limit.
-export WP_CLI_PHP_ARGS="${WP_CLI_PHP_ARGS:--d memory_limit=512M}"
+wp() {
+    php -d memory_limit=512M /usr/local/bin/wp "$@"
+}
 
 # Check the database state instead of only checking wp-config.php. A failed
 # install can leave wp-config.php behind while WordPress remains uninstalled.
