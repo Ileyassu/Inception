@@ -31,10 +31,23 @@ if ! wp core is-installed --allow-root > /dev/null 2>&1; then
 
     echo "Checking the WordPress database connection..."
     attempts=0
-    until wp db check --allow-root; do
+    until mariadb \
+        --skip-ssl \
+        --host=mariadb \
+        --user="${MYSQL_USER}" \
+        --password="${MYSQL_PASSWORD}" \
+        "${MYSQL_DATABASE}" \
+        --execute="SELECT 1" > /dev/null 2>&1; do
         attempts=$((attempts + 1))
         if [ "$attempts" -ge 20 ]; then
             echo "WordPress could not connect to the database with the configured credentials." >&2
+            mariadb \
+                --skip-ssl \
+                --host=mariadb \
+                --user="${MYSQL_USER}" \
+                --password="${MYSQL_PASSWORD}" \
+                "${MYSQL_DATABASE}" \
+                --execute="SELECT 1"
             exit 1
         fi
         sleep 3
