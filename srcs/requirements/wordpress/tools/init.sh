@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 cd /var/www/html
 
 # Keep the CLI installer independent from PHP-FPM's smaller runtime limit.
@@ -11,6 +13,16 @@ wp() {
 # install can leave wp-config.php behind while WordPress remains uninstalled.
 if ! wp core is-installed --allow-root > /dev/null 2>&1; then
     echo "Setting up WordPress..."
+
+    echo "Waiting for MariaDB to become ready..."
+    until mariadb-admin ping \
+        --host=mariadb \
+        --user="${MYSQL_USER}" \
+        --password="${MYSQL_PASSWORD}" \
+        --silent; do
+        sleep 3
+    done
+    echo "MariaDB is ready."
 
     # Download WordPress core files when the persistent volume is empty.
     if [ ! -f index.php ]; then
@@ -26,20 +38,6 @@ if ! wp core is-installed --allow-root > /dev/null 2>&1; then
             --dbhost=mariadb \
             --allow-root
     fi
-
-    # Wait for MariaDB to boot and accept connections.
-    echo "Waiting for database connection..."
-    attempts=0
-    until wp db check --allow-root > /dev/null 2>&1; do
-        attempts=$((attempts + 1))
-        if [ "$attempts" -ge 20 ]; then
-            echo "WordPress could not connect to the database with the configured credentials." >&2
-            wp db check --allow-root
-            exit 1
-        fi
-        sleep 3
-    done
-    echo "Database connected!"
 
     # Install WordPress automatically when the database is not initialized.
     wp core install \
